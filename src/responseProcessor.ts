@@ -1,10 +1,32 @@
 import { ResponseRules } from './responseRules';
 import { Response, ResponseRulesConfig } from './types';
 
+interface FallbackStrategy {
+  generateAlternative: (
+    response: string,
+    context?: ConversationContext
+  ) => Promise<string>;
+}
+
+interface ResponseMetrics {
+  totalResponses: number;
+  duplicatesDetected: number;
+  averageSimilarity: number;
+}
+
+interface ConversationContext {
+  recentTopics?: string[];
+  userPreferences?: Record<string, any>;
+  conversationHistory?: string[];
+}
+
+/**
+ * ResponseProcessor class handles response deduplication and processing
+ * utilizing advanced text analysis and fallback strategies.
+ */
 export class ResponseProcessor {
   private responseManager: ResponseRules;
-  // Initialize fallbackStrategies with empty array
-  private fallbackStrategies: FallbackStrategy[] = [];
+  private fallbackStrategies: FallbackStrategy[] = []; // Initialize with empty array
   private responseMetrics: ResponseMetrics = {
     totalResponses: 0,
     duplicatesDetected: 0,
@@ -18,6 +40,9 @@ export class ResponseProcessor {
 
   /**
    * Process a response through duplication detection and optimization
+   * @param response - Input response to process
+   * @param context - Optional conversation context
+   * @returns Processed and validated response
    */
   public async processResponse(response: string, context?: ConversationContext): Promise<string> {
     this.responseMetrics.totalResponses++;
@@ -33,6 +58,8 @@ export class ResponseProcessor {
 
   /**
    * Handle cases where a duplicate response is detected
+   * @param originalResponse - The detected duplicate response
+   * @param context - Optional conversation context
    */
   private async handleDuplicateResponse(
     originalResponse: string, 
@@ -55,10 +82,15 @@ export class ResponseProcessor {
   }
 
   /**
-   * Initialize default fallback strategies
+   * Initialize default fallback strategies with advanced response variations
    */
   private initializeFallbackStrategies(): void {
     this.fallbackStrategies = [
+      {
+        generateAlternative: async (response: string) => {
+          return `To express this differently: ${response}`;
+        }
+      },
       {
         generateAlternative: async (response: string) => {
           return `Let me rephrase that: ${response}`;
@@ -66,22 +98,28 @@ export class ResponseProcessor {
       },
       {
         generateAlternative: async (response: string) => {
-          return `To put it another way: ${response}`;
+          return `From another perspective: ${response}`;
         }
       }
     ];
   }
 
   /**
-   * Emergency fallback for when all strategies fail
+   * Emergency fallback response generation
+   * @param originalResponse - The original response to transform
    */
   private emergencyFallbackResponse(originalResponse: string): string {
-    const prefix = "To express this differently: ";
+    const prefixes = [
+      "Alternatively, ",
+      "To put it another way, ",
+      "In other words, "
+    ];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
     return prefix + originalResponse;
   }
 
   /**
-   * Get current metrics
+   * Get current response processing metrics
    */
   public getMetrics(): ResponseMetrics {
     return { ...this.responseMetrics };
@@ -89,6 +127,7 @@ export class ResponseProcessor {
 
   /**
    * Add a custom fallback strategy
+   * @param strategy - Custom fallback strategy implementation
    */
   public addFallbackStrategy(strategy: FallbackStrategy): void {
     this.fallbackStrategies.push(strategy);
@@ -100,23 +139,4 @@ export class ResponseProcessor {
   public clearFallbackStrategies(): void {
     this.fallbackStrategies = [];
   }
-}
-
-interface FallbackStrategy {
-  generateAlternative: (
-    response: string,
-    context?: ConversationContext
-  ) => Promise<string>;
-}
-
-interface ResponseMetrics {
-  totalResponses: number;
-  duplicatesDetected: number;
-  averageSimilarity: number;
-}
-
-interface ConversationContext {
-  recentTopics?: string[];
-  userPreferences?: Record<string, any>;
-  conversationHistory?: string[];
 }
