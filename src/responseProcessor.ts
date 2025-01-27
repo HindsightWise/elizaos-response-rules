@@ -1,36 +1,14 @@
 import { ResponseRules } from './responseRules';
-import { Response, ResponseRulesConfig } from './types';
+import { Response, ResponseRulesConfig, ResponseMetrics } from './types';
 
-interface FallbackStrategy {
-  generateAlternative: (
-    response: string,
-    context?: ConversationContext
-  ) => Promise<string>;
-}
-
-interface ResponseMetrics {
-  totalResponses: number;
-  duplicatesDetected: number;
-  averageSimilarity: number;
-}
-
-interface ConversationContext {
-  recentTopics?: string[];
-  userPreferences?: Record<string, any>;
-  conversationHistory?: string[];
-}
-
-/**
- * ResponseProcessor class handles response deduplication and processing
- * utilizing advanced text analysis and fallback strategies.
- */
 export class ResponseProcessor {
   private responseManager: ResponseRules;
-  private fallbackStrategies: FallbackStrategy[] = []; // Initialize with empty array
+  private fallbackStrategies: FallbackStrategy[] = [];
   private responseMetrics: ResponseMetrics = {
     totalResponses: 0,
     duplicatesDetected: 0,
-    averageSimilarity: 0
+    averageSimilarity: 0,
+    totalSimilarityScore: 0  // Added for average calculation
   };
 
   constructor(config: ResponseRulesConfig) {
@@ -38,14 +16,14 @@ export class ResponseProcessor {
     this.initializeFallbackStrategies();
   }
 
-  /**
-   * Process a response through duplication detection and optimization
-   * @param response - Input response to process
-   * @param context - Optional conversation context
-   * @returns Processed and validated response
-   */
   public async processResponse(response: string, context?: ConversationContext): Promise<string> {
     this.responseMetrics.totalResponses++;
+    
+    // Calculate similarity with most recent response
+    const similarity = this.responseManager.calculateSimilarity(response);
+    this.responseMetrics.totalSimilarityScore += similarity;
+    this.responseMetrics.averageSimilarity = 
+      this.responseMetrics.totalSimilarityScore / this.responseMetrics.totalResponses;
     
     if (this.responseManager.isResponseAllowed(response)) {
       this.responseManager.addResponse(response);
@@ -56,16 +34,10 @@ export class ResponseProcessor {
     return await this.handleDuplicateResponse(response, context);
   }
 
-  /**
-   * Handle cases where a duplicate response is detected
-   * @param originalResponse - The detected duplicate response
-   * @param context - Optional conversation context
-   */
   private async handleDuplicateResponse(
     originalResponse: string, 
     context?: ConversationContext
   ): Promise<string> {
-    // Try each fallback strategy in sequence
     for (const strategy of this.fallbackStrategies) {
       const alternativeResponse = await strategy.generateAlternative(
         originalResponse,
@@ -81,9 +53,6 @@ export class ResponseProcessor {
     return this.emergencyFallbackResponse(originalResponse);
   }
 
-  /**
-   * Initialize default fallback strategies with advanced response variations
-   */
   private initializeFallbackStrategies(): void {
     this.fallbackStrategies = [
       {
@@ -104,10 +73,6 @@ export class ResponseProcessor {
     ];
   }
 
-  /**
-   * Emergency fallback response generation
-   * @param originalResponse - The original response to transform
-   */
   private emergencyFallbackResponse(originalResponse: string): string {
     const prefixes = [
       "Alternatively, ",
@@ -118,25 +83,33 @@ export class ResponseProcessor {
     return prefix + originalResponse;
   }
 
-  /**
-   * Get current response processing metrics
-   */
   public getMetrics(): ResponseMetrics {
-    return { ...this.responseMetrics };
+    // Format numbers to 2 decimal places
+    return {
+      totalResponses: this.responseMetrics.totalResponses,
+      duplicatesDetected: this.responseMetrics.duplicatesDetected,
+      averageSimilarity: Number(this.responseMetrics.averageSimilarity.toFixed(2))
+    };
   }
 
-  /**
-   * Add a custom fallback strategy
-   * @param strategy - Custom fallback strategy implementation
-   */
   public addFallbackStrategy(strategy: FallbackStrategy): void {
     this.fallbackStrategies.push(strategy);
   }
 
-  /**
-   * Clear all fallback strategies
-   */
   public clearFallbackStrategies(): void {
     this.fallbackStrategies = [];
   }
+}
+
+interface FallbackStrategy {
+  generateAlternative: (
+    response: string,
+    context?: ConversationContext
+  ) => Promise<string>;
+}
+
+interface ConversationContext {
+  recentTopics?: string[];
+  userPreferences?: Record<string, any>;
+  conversationHistory?: string[];
 }
