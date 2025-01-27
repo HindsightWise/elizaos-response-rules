@@ -3,43 +3,36 @@ import { Response, ResponseRulesConfig } from './types';
 
 export class ResponseProcessor {
   private responseManager: ResponseRules;
-  private fallbackStrategies: FallbackStrategy[];
-  private responseMetrics: ResponseMetrics;
+  // Initialize fallbackStrategies with empty array
+  private fallbackStrategies: FallbackStrategy[] = [];
+  private responseMetrics: ResponseMetrics = {
+    totalResponses: 0,
+    duplicatesDetected: 0,
+    averageSimilarity: 0
+  };
 
   constructor(config: ResponseRulesConfig) {
     this.responseManager = new ResponseRules(config);
-    this.responseMetrics = {
-      totalResponses: 0,
-      duplicatesDetected: 0,
-      averageSimilarity: 0
-    };
     this.initializeFallbackStrategies();
   }
 
   /**
    * Process a response through duplication detection and optimization
-   * @param response - The proposed response text
-   * @param context - Optional conversation context
-   * @returns Processed response or alternative if duplicate detected
    */
   public async processResponse(response: string, context?: ConversationContext): Promise<string> {
     this.responseMetrics.totalResponses++;
     
-    // Check for response eligibility
     if (this.responseManager.isResponseAllowed(response)) {
       this.responseManager.addResponse(response);
       return response;
     }
 
-    // Handle duplicate detection
     this.responseMetrics.duplicatesDetected++;
     return await this.handleDuplicateResponse(response, context);
   }
 
   /**
    * Handle cases where a duplicate response is detected
-   * @param originalResponse - The original duplicate response
-   * @param context - Optional conversation context
    */
   private async handleDuplicateResponse(
     originalResponse: string, 
@@ -58,45 +51,54 @@ export class ResponseProcessor {
       }
     }
 
-    // If all strategies fail, use emergency fallback
     return this.emergencyFallbackResponse(originalResponse);
   }
 
   /**
-   * Initialize fallback strategies for handling duplicates
+   * Initialize default fallback strategies
    */
   private initializeFallbackStrategies(): void {
     this.fallbackStrategies = [
-      // Paraphrase strategy
       {
         generateAlternative: async (response: string) => {
-          // Implement paraphrasing logic
-          return `Alternative perspective: ${response}`;
+          return `Let me rephrase that: ${response}`;
         }
       },
-      // Elaboration strategy
       {
         generateAlternative: async (response: string) => {
-          // Implement elaboration logic
-          return `${response} Furthermore, ...`;
+          return `To put it another way: ${response}`;
         }
       }
     ];
   }
 
   /**
-   * Emergency fallback when all strategies fail
+   * Emergency fallback for when all strategies fail
    */
   private emergencyFallbackResponse(originalResponse: string): string {
-    // Implement basic transformation to ensure uniqueness
-    return `Let me rephrase: ${originalResponse}`;
+    const prefix = "To express this differently: ";
+    return prefix + originalResponse;
   }
 
   /**
-   * Get current response processing metrics
+   * Get current metrics
    */
   public getMetrics(): ResponseMetrics {
-    return this.responseMetrics;
+    return { ...this.responseMetrics };
+  }
+
+  /**
+   * Add a custom fallback strategy
+   */
+  public addFallbackStrategy(strategy: FallbackStrategy): void {
+    this.fallbackStrategies.push(strategy);
+  }
+
+  /**
+   * Clear all fallback strategies
+   */
+  public clearFallbackStrategies(): void {
+    this.fallbackStrategies = [];
   }
 }
 
