@@ -1,8 +1,9 @@
 import { ElizaCharacter } from './characterIntegration';
-import { createLogger } from 'winston';
+import winston from 'winston';
+const { format, transports } = winston;
 
 // Configure logging
-const logger = createLogger({
+const logger = winston.createLogger({
   level: 'info',
   format: format.combine(
     format.timestamp(),
@@ -48,9 +49,9 @@ async function runDemo() {
   logger.info('Starting conversation demonstration...');
   
   for (const userInput of conversationFlow) {
-    logger.info(`User Input: ${userInput}`);
+    logger.info(`\nUser Input: ${userInput}`);
     const response = await character.generateResponse(userInput);
-    logger.info(`Character Response: ${response}\n`);
+    logger.info(`Character Response: ${response}`);
     
     // Add delay between responses for readability
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -58,7 +59,7 @@ async function runDemo() {
 
   // Display response metrics
   const metrics = character.getResponseMetrics();
-  logger.info('Response Metrics:', metrics);
+  logger.info('\nResponse Metrics:', metrics);
 }
 
 // Run the demo
