@@ -1,9 +1,17 @@
 import { ResponseProcessor } from '../src/responseProcessor';
 
-/**
- * ElizaOS Character Integration Example
- * Demonstrates integration of response rules with character processing
- */
+export interface CharacterConfig {
+  name: string;
+  personality: string;
+  settings: {
+    responseRules: {
+      repetitionWindow: number;
+      similarityThreshold: number;
+    };
+    userPreferences: Record<string, any>;
+  };
+}
+
 export class ElizaCharacter {
   private responseProcessor: ResponseProcessor;
   private conversationHistory: string[] = [];
@@ -18,9 +26,7 @@ export class ElizaCharacter {
   }
 
   /**
-   * Process user input and generate response
-   * @param userInput - The user's message
-   * @returns Processed and validated response
+   * Generate a response to user input
    */
   public async generateResponse(userInput: string): Promise<string> {
     // Build conversation context
@@ -46,64 +52,46 @@ export class ElizaCharacter {
   }
 
   /**
-   * Generate initial response using character's base personality
-   * @param userInput - The user's message
+   * Get response metrics from the processor
    */
-  private async generateInitialResponse(userInput: string): Promise<string> {
-    // Implement your character's core response generation logic here
-    return `Based on ${this.characterConfig.personality}, here's a response...`;
+  public getResponseMetrics() {
+    return this.responseProcessor.getMetrics();
   }
 
   /**
-   * Extract recent conversation topics for context
+   * Generate initial response using character's base personality
+   */
+  private async generateInitialResponse(userInput: string): Promise<string> {
+    // Mock response generation based on character personality
+    const personality = this.characterConfig.personality;
+    const responses = [
+      `As a ${personality} assistant, I would suggest...`,
+      `Based on my ${personality} approach, I think...`,
+      `Drawing from my ${personality} background, I'd say...`,
+      `With my ${personality} perspective, I can tell you that...`
+    ];
+    
+    return responses[Math.floor(Math.random() * responses.length)] + 
+           ` [Response to: ${userInput}]`;
+  }
+
+  /**
+   * Extract recent conversation topics
    */
   private extractRecentTopics(): string[] {
-    // Implement topic extraction logic
     return this.conversationHistory
       .slice(-5)
       .map(msg => this.extractMainTopic(msg));
   }
 
+  /**
+   * Extract main topic from a message
+   */
   private extractMainTopic(message: string): string {
-    // Implement topic extraction logic
-    return 'extracted topic';
+    // Simple topic extraction logic
+    const words = message.split(' ');
+    // Take first meaningful word as topic
+    const topic = words.find(word => word.length > 4) || words[0];
+    return topic.toLowerCase();
   }
-}
-
-// Example character configuration
-interface CharacterConfig {
-  name: string;
-  personality: string;
-  settings: {
-    responseRules: {
-      repetitionWindow: number;
-      similarityThreshold: number;
-    };
-    userPreferences: Record<string, any>;
-  };
-}
-
-// Usage example
-async function main() {
-  const character = new ElizaCharacter({
-    name: "Assistant",
-    personality: "helpful and friendly",
-    settings: {
-      responseRules: {
-        repetitionWindow: 25,
-        similarityThreshold: 0.82
-      },
-      userPreferences: {
-        verbosity: "medium",
-        tone: "professional"
-      }
-    }
-  });
-
-  // Example conversation flow
-  const response1 = await character.generateResponse("Hello!");
-  console.log("Response 1:", response1);
-
-  const response2 = await character.generateResponse("How are you?");
-  console.log("Response 2:", response2);
 }
