@@ -1,4 +1,5 @@
 import { ResponseProcessor } from '../src/responseProcessor';
+import { ResponseMetrics, ConversationContext } from '../src/types';
 
 export interface CharacterConfig {
   name: string;
@@ -27,42 +28,39 @@ export class ElizaCharacter {
 
   /**
    * Generate a response to user input
+   * @param userInput - The user's message to respond to
+   * @returns Promise resolving to the generated response
    */
   public async generateResponse(userInput: string): Promise<string> {
-    // Build conversation context
     const context = {
       recentTopics: this.extractRecentTopics(),
       userPreferences: this.characterConfig.settings.userPreferences,
       conversationHistory: this.conversationHistory
     };
 
-    // Generate initial response using character's base logic
     const initialResponse = await this.generateInitialResponse(userInput);
-
-    // Process through response rules
     const processedResponse = await this.responseProcessor.processResponse(
       initialResponse,
       context
     );
 
-    // Update conversation history
     this.conversationHistory.push(processedResponse);
-    
     return processedResponse;
   }
 
   /**
-   * Get response metrics from the processor
+   * Get current response metrics
+   * @returns ResponseMetrics object containing response statistics
    */
-  public getResponseMetrics() {
+  public getResponseMetrics(): ResponseMetrics {
     return this.responseProcessor.getMetrics();
   }
 
   /**
    * Generate initial response using character's base personality
+   * @param userInput - The user's message to respond to
    */
   private async generateInitialResponse(userInput: string): Promise<string> {
-    // Mock response generation based on character personality
     const personality = this.characterConfig.personality;
     const responses = [
       `As a ${personality} assistant, I would suggest...`,
@@ -76,7 +74,8 @@ export class ElizaCharacter {
   }
 
   /**
-   * Extract recent conversation topics
+   * Extract recent conversation topics for context
+   * @returns Array of recent topics
    */
   private extractRecentTopics(): string[] {
     return this.conversationHistory
@@ -86,11 +85,11 @@ export class ElizaCharacter {
 
   /**
    * Extract main topic from a message
+   * @param message - Message to analyze
+   * @returns Extracted topic
    */
   private extractMainTopic(message: string): string {
-    // Simple topic extraction logic
     const words = message.split(' ');
-    // Take first meaningful word as topic
     const topic = words.find(word => word.length > 4) || words[0];
     return topic.toLowerCase();
   }
