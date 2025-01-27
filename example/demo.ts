@@ -59,7 +59,11 @@ async function runDemo() {
 
   // Display response metrics
   const metrics = character.getResponseMetrics();
-  logger.info('\nResponse Metrics:', metrics);
+  logger.info('\nResponse Metrics:', {
+    totalResponses: metrics.totalResponses,
+    duplicatesDetected: metrics.duplicatesDetected,
+    averageSimilarity: `${(metrics.averageSimilarity * 100).toFixed(1)}%`
+  });
 }
 
 // Run the demo
